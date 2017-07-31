@@ -113,7 +113,7 @@ class ThresholdPredictions:
                 current_is_bot = True
             # Header isn't bot if User Agent not yet met
             if y_tst not in self.__ua:
-                current_is_bot = False
+                current_is_bot = None
             is_bot.append(current_is_bot)
             compare_answers.append(current_answer)
             answers_count.append(len(y_predicted[i]))

@@ -3,6 +3,7 @@
 import json
 import os
 import time
+import httpagentparser
 from itertools import combinations
 
 import numpy as np
@@ -37,9 +38,6 @@ class LogParser:
         if filter_crawlers:
             if not elements[1]:
                 return False
-            else:
-                if is_crawler(elements[1]):  # client ip
-                    return False
 
         main_row = {'timestamp': elements[0], 'ip': elements[1]}
         value_row = {}
@@ -54,12 +52,25 @@ class LogParser:
                     if order > 0:
                         ordered_row.update({header: order})
                 if not parse_ua:
+                    if filter_crawlers:
+                        if is_crawler(elements[1], value_row['User-Agent']):
+                            return False
+                        if 'bot' in httpagentparser.detect(value_row['User-Agent']):
+                            if httpagentparser.detect(value_row['User-Agent'])['bot']:
+                                return False
                     main_row['User_Agent'] = value_row['User-Agent']
                 else:
+                    if filter_crawlers:
+                        if is_crawler(elements[1], value_row['User-Agent']):
+                            return False
+                        if 'bot' in httpagentparser.detect(value_row['User-Agent']):
+                            if httpagentparser.detect(value_row['User-Agent'])['bot']:
+                                return False
                     ua_obj = get_ua(value_row['User-Agent'])
                     main_row = {
                         'timestamp': elements[0],
                         'ip': elements[1],
+                        'ua_string': value_row['User-Agent'],
                         'ua_family_code': ua_obj['ua_family_code'],
                         'ua_version': ua_obj['ua_version'],
                         'ua_class_code': ua_obj['ua_class_code'],
