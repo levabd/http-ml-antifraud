@@ -70,9 +70,9 @@ class LogParser:
                     main_row = {
                         'timestamp': elements[0],
                         'ip': elements[1],
-                        'ua_string': value_row['User-Agent'],
+                        'User_Agent': value_row['User-Agent'],
                         'ua_family_code': ua_obj['ua_family_code'],
-                        'ua_version': ua_obj['ua_version'],
+                        'ua_version': ua_obj['ua_family_code'] + ua_obj['ua_version'],
                         'ua_class_code': ua_obj['ua_class_code'],
                         'device_class_code': ua_obj['device_class_code'],
                         'os_family_code': ua_obj['os_family_code'],

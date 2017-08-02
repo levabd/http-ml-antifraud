@@ -1,0 +1,10 @@
+browser
+mobile_browser
+library
+email_client
+unrecognized
+multimedia_player
+validator
+offline_browser
+feed_reader
+wap_browser

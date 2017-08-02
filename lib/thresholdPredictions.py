@@ -11,12 +11,14 @@ class ThresholdPredictions:
     Multilabel prediction methods based on predict pragma vector and threshold
     """
 
-    def __init__(self, user_agent_list, clf = None):
+    def __init__(self, user_agent_list, full_user_agent_list=None, clf=None):
         """
         :param user_agent_list: User Agent list for classification
+        :param user_agent_list: User Agent for test sample
         :param clf: Classifier
         """
         self.__ua = user_agent_list
+        self.__full_ua = full_user_agent_list if full_user_agent_list else user_agent_list
         self.__clf = clf
 
     def return_ua(self, index):
@@ -26,14 +28,23 @@ class ThresholdPredictions:
         """
         return self.__ua[index]
 
-    def return_prediction_ua(self, predictions):
+    def return_full_ua(self, index):
+        """
+        :param index: Class index
+        :return: User Agent label for class
+        """
+        return self.__full_ua[index]
+
+    def return_prediction_ua(self, predictions, sparce_pred=False):
         """
         :param predictions: prediction vector
+        :param sparce_pred: True if predictions is sparce matrix
         :return: User Agent label for prediction vector
         """
-        for i, label in enumerate(predictions):
+        pred = predictions.toarray()[0] if sparce_pred else predictions
+        for i, label in enumerate(pred):
             if label == 1:
-                return self.return_ua(i)
+                return self.return_full_ua(i)
 
     def return_thresholded_prediction_ua(self, predictions, alpha):
         """
@@ -47,11 +58,12 @@ class ThresholdPredictions:
                 ua_list.append(self.return_ua(i))
         return ua_list
 
-    def predict(self, x_test, y_test, alpha, memory_warn=True):
+    def predict(self, x_test, y_test, alpha, sparce_y=False, memory_warn=True):
         """
         :param x_test: X test sample
         :param y_test: y test sample
         :param alpha: Threshold
+        :param sparce_y: True if y_test is sparce matrix
 	    :param memory_warn: If True doesn`t start calculation if memory not enougth
         :return: frame of true User Agent names from test sample, frame of list Predicted 
                  User Agent, list of bool true if at least one predicted User Agent equal 
@@ -64,14 +76,20 @@ class ThresholdPredictions:
 
         predictions_proba = self.__clf.predict_proba(x_test)
 
-        y_test_names = pd.DataFrame(y_test).apply(
-            lambda l: self.return_prediction_ua(l), axis=1)
+        if sparce_y:
+            y_test_names_ar = []
+            for i in range(y_test.shape[0]):
+                y_test_names_ar.append(self.return_prediction_ua(y_test[i], True))
+            y_test_names = pd.DataFrame(y_test_names_ar)
+        else:
+            y_test_names = pd.DataFrame(y_test).apply(
+                lambda l: self.return_prediction_ua(l, False), axis=1)
         y_predicted = pd.DataFrame(predictions_proba).apply(
             lambda l: self.return_thresholded_prediction_ua(l, alpha), axis=1)
 
         compare_answers = []
         answers_count = []
-        for i, y_tst in tqdm(enumerate(y_test_names)):
+        for i, y_tst in tqdm(enumerate(y_test_names[0] if sparce_y else y_test_names)):
             current_answer = True
             if y_tst not in y_predicted[i]:
                 current_answer = False
@@ -80,12 +98,14 @@ class ThresholdPredictions:
 
         return y_test_names, y_predicted, compare_answers, answers_count
 
-    def bot_predict(self, label_binarizer_test, x_test, y_test, alpha, memory_warn=True):
+    def bot_predict(self, x_test, y_test, alpha, sparce_y=False,
+                    mark_new_labels_None=False, memory_warn=True):
         """
-        :param label_binarizer: label binarizer for y_test
         :param x_test: X test sample
         :param y_test: y test sample
         :param alpha: Threshold
+        :param sparce_y: True if y_test is sparce matrix
+        :param mark_new_labels_None: if False new labels interpreted as human
         :param memory_warn: If True doesn`t start calculation if memory not enougth
         :return: frame of true User Agent names from test sample, frame of list Predicted
                  User Agent, list of bool true if at least one predicted User Agent equal
@@ -98,14 +118,21 @@ class ThresholdPredictions:
 
         predictions_proba = self.__clf.predict_proba(x_test)
 
-        y_test_names = label_binarizer_test.inverse_transform(y_test)
+        if sparce_y:
+            y_test_names_ar = []
+            for i in range(y_test.shape[0]):
+                y_test_names_ar.append(self.return_prediction_ua(y_test[i], True))
+            y_test_names = pd.DataFrame(y_test_names_ar)
+        else:
+            y_test_names = pd.DataFrame(y_test).apply(
+                lambda l: self.return_prediction_ua(l, False), axis=1)
         y_predicted = pd.DataFrame(predictions_proba).apply(
             lambda l: self.return_thresholded_prediction_ua(l, alpha), axis=1)
 
         compare_answers = []
         answers_count = []
         is_bot = []
-        for i, y_tst in tqdm(enumerate(y_test_names)):
+        for i, y_tst in tqdm(enumerate(y_test_names[0] if sparce_y else y_test_names)):
             current_answer = True
             current_is_bot = False
             if y_tst not in y_predicted[i]:
@@ -113,7 +140,7 @@ class ThresholdPredictions:
                 current_is_bot = True
             # Header isn't bot if User Agent not yet met
             if y_tst not in self.__ua:
-                current_is_bot = None
+                current_is_bot = None if mark_new_labels_None else False
             is_bot.append(current_is_bot)
             compare_answers.append(current_answer)
             answers_count.append(len(y_predicted[i]))

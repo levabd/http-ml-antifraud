@@ -104,5 +104,8 @@ ENV/
 # classifyer files
 cls/
 
-udger DB
+# udger DB
 /lib/parsers/udger-data/udgerdb_v3.dat
+
+# Data Frames
+*.npy

@@ -1,0 +1,8 @@
+desktop
+smartphone
+tablet
+unrecognized
+smart_tv
+game_console
+pda
+wearable_computer
