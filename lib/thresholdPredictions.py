@@ -46,46 +46,52 @@ class ThresholdPredictions:
             if label == 1:
                 return self.return_full_ua(i)
 
-    def return_thresholded_prediction_ua(self, predictions, alpha):
+    def return_thresholded_prediction_ua(self, predictions, alpha, single_labeling=False):
         """
         :param predictions: prediction vector
         :param alpha: threshold
+        :param single_labeling: False if classifyer classify multilabel y
         :return: User Agent label for prediction vector
         """
         ua_list = []
         for i, proba in enumerate(predictions):
             if proba > alpha:
-                ua_list.append(self.return_ua(i))
+                ua_list.append(self.__clf.classes_[i] if single_labeling else self.return_ua(i))
         return ua_list
-
-    def predict(self, x_test, y_test, alpha, sparce_y=False, memory_warn=True):
+   
+    def predict(self, x_test, y_test, alpha, sparce_y=False, memory_warn=True, single_labels=False):
         """
         :param x_test: X test sample
         :param y_test: y test sample
         :param alpha: Threshold
         :param sparce_y: True if y_test is sparce matrix
 	    :param memory_warn: If True doesn`t start calculation if memory not enougth
-        :return: frame of true User Agent names from test sample, frame of list Predicted 
-                 User Agent, list of bool true if at least one predicted User Agent equal 
+        :param single_labels: False if classifyer classify multilabel y
+        :return: frame of true User Agent names from test sample, frame of list Predicted
+                 User Agent, list of bool true if at least one predicted User Agent equal
                  true User Agent, list of answer count
         """
         mem = psutil.virtual_memory()
-        if (x_test.shape[0] * len(self.__ua) * 8 > mem.free) and memory_warn:
+        classes_l = self.__clf.classes_ if single_labels else self.__ua
+        if (x_test.shape[0] * len(classes_l) * 8 > mem.free) and memory_warn:
             print("Not enought memory for predict proba calculation")
             return False
 
         predictions_proba = self.__clf.predict_proba(x_test)
 
-        if sparce_y:
-            y_test_names_ar = []
-            for i in range(y_test.shape[0]):
-                y_test_names_ar.append(self.return_prediction_ua(y_test[i], True))
-            y_test_names = pd.DataFrame(y_test_names_ar)
+        if single_labels:
+            y_test_names = y_test
         else:
-            y_test_names = pd.DataFrame(y_test).apply(
-                lambda l: self.return_prediction_ua(l, False), axis=1)
+            if sparce_y:
+                y_test_names_ar = []
+                for i in range(y_test.shape[0]):
+                    y_test_names_ar.append(self.return_prediction_ua(y_test[i], True))
+                y_test_names = pd.DataFrame(y_test_names_ar)
+            else:
+                y_test_names = pd.DataFrame(y_test).apply(
+                    lambda l: self.return_prediction_ua(l, False), axis=1)
         y_predicted = pd.DataFrame(predictions_proba).apply(
-            lambda l: self.return_thresholded_prediction_ua(l, alpha), axis=1)
+            lambda l: self.return_thresholded_prediction_ua(l, alpha, single_labeling=single_labels), axis=1)
 
         compare_answers = []
         answers_count = []
