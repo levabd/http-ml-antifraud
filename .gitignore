@@ -109,3 +109,6 @@ cls/
 
 # Data Frames
 *.npy
+
+# VW Data
+*.vw
