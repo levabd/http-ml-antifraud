@@ -69,8 +69,14 @@ def is_crawler(client_ip, client_ua):
         'cat_explorador',
         'huaweisymantecspider',
         'coccocbot', 
+        'powermarks', 
+        'prism', 
+        'leechcraft', 
+        'wkhtmltopdf',
 
         # I think next is potencial bad bot (framework for apps or bad crowler)
+        'java',
+        'www::mechanize',
         'grapeshotcrawler',
         'netestate_crawler',
         'ccbot',

@@ -2,6 +2,7 @@
 
 import json
 import os
+import glob
 import time
 import httpagentparser
 from itertools import combinations
@@ -42,6 +43,8 @@ class LogParser:
         main_row = {'timestamp': elements[0], 'ip': elements[1]}
         value_row = {}
         ordered_row = {}
+        if elements[2][0] == "'":
+            elements[2] = elements[2].strip()[1:][:-1].translate(str.maketrans("'", '"'))
         if bool(elements[2] and elements[2].strip()):
             # noinspection PyBroadException
             try:
@@ -98,13 +101,14 @@ class LogParser:
 
     def __parse_logs_from_folder(self, start_log_index, finish_log_index, filter_crawlers, parse_ua,
                                  start_log_time=0, finish_log_time=time.time()):
-        files_in_folder = os.listdir(path=self.__log_folder)
+        files_in_folder = list(glob.iglob(self.__log_folder + '/**/*.log', recursive=True))
+        # files_in_folder = os.listdir(path=self.__log_folder)
         if finish_log_index > len(files_in_folder) - 1:
             finish_log_index = len(files_in_folder) - 1
         for i in tqdm(range(start_log_index, finish_log_index)):
-            if '.log' in files_in_folder[i]:
-                main_sample, value_sample, order_sample = self.__parse_single_log(
-                    self.__log_folder + files_in_folder[i], filter_crawlers, parse_ua, start_log_time, finish_log_time)
+            if files_in_folder[i].endswith('.log'):
+                main_sample, value_sample, order_sample = self.__parse_single_log(files_in_folder[i], 
+                    filter_crawlers, parse_ua, start_log_time, finish_log_time)
                 self.__value_table.extend(value_sample)
                 self.__order_table.extend(order_sample)
                 self.__main_table.extend(main_sample)
